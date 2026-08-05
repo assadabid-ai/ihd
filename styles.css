@@ -1,0 +1,590 @@
+/* ===================================================================
+   NUST MS-AI Thesis Defence — Presentation Stylesheet
+   Biomass Calculation & Carbon Stock Estimation Using Satellite Imagery
+   Formal academic theme: deep navy + restrained gold, serif display
+   headings, flat hairline-ruled components. Offline, no dependencies.
+   =================================================================== */
+
+:root {
+  --navy:       #14253d;
+  --navy-deep:  #0d1a2c;
+  --blue:       #244468;
+  --blue-light: #355c86;
+  --gold:       #9a7a33;   /* rules and accents on light backgrounds   */
+  --gold-deep:  #7c6021;   /* kicker / label text needing contrast     */
+  --gold-soft:  #c7a85e;   /* accents on dark backgrounds              */
+  --good:       #2f6a5b;
+  --warn:       #9a4a31;
+  --ink:        #1f2733;
+  --ink-soft:   #39434f;
+  --slate:      #4a5564;
+  --grey:       #5f6b79;
+  --grey-light: #93a0af;
+  --line:       #d6dde6;
+  --line-soft:  #e8ecf1;
+  --paper:      #ffffff;
+  --card:       #faf8f2;   /* warm off-white for callouts              */
+  --bg:         #e7ebf1;
+  --serif:      "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif;
+  --sans:       -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --shadow:     0 14px 38px rgba(13, 26, 44, 0.18);
+  --shadow-sm:  0 2px 8px rgba(13, 26, 44, 0.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Global type scale. Bumping the root size lifts every rem-based and
+   clamped font size together for a uniform, slightly larger deck. */
+html { font-size: 19px; }
+
+html, body {
+  height: 100%;
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  overflow: hidden;
+}
+
+/* ---------- Deck / slide framing ---------- */
+#deck { width: 100vw; height: 100vh; position: relative; }
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  padding: 3.2vh 4.2vw 8.5vh;
+  background: var(--paper);
+  animation: fade 0.4s ease;
+  overflow: hidden;
+}
+.slide.active { display: flex; }
+
+@keyframes fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Slide header ---------- */
+.slide-kicker {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  max-width: calc(100% - 250px);
+}
+.slide-kicker::before {
+  content: "";
+  display: inline-block;
+  width: 16px; height: 2px;
+  background: var(--gold);
+  vertical-align: middle;
+  margin-right: 0.55rem;
+  margin-bottom: 0.18em;
+}
+.slide h1 {
+  font-family: var(--serif);
+  font-size: clamp(1.55rem, 2.85vw, 2.3rem);
+  color: var(--navy);
+  line-height: 1.14;
+  font-weight: 650;
+  letter-spacing: 0.005em;
+  max-width: calc(100% - 250px);
+}
+.slide h1::after {
+  content: "";
+  display: block;
+  width: 58px;
+  height: 2px;
+  margin-top: 0.7rem;
+  background: var(--gold);
+}
+
+.slide-body {
+  flex: 1;
+  display: flex;
+  gap: 2.4vw;
+  margin-top: 2.2vh;
+  min-height: 0;
+}
+.col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.col.narrow { flex: 0.85; }
+.col.wide   { flex: 1.35; }
+
+/* ---------- Text content ---------- */
+ul.points { list-style: none; }
+ul.points li {
+  position: relative;
+  padding: 0.42rem 0 0.42rem 1.5rem;
+  font-size: clamp(0.95rem, 1.25vw, 1.1rem);
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+ul.points li::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0.92em;
+  width: 7px; height: 7px;
+  background: var(--gold);
+}
+ul.points li.sub {
+  padding-left: 2.6rem;
+  font-size: 0.96em;
+  color: var(--grey);
+}
+ul.points li.sub::before {
+  left: 1.2rem; top: 0.9em;
+  width: 5px; height: 5px;
+  background: var(--grey-light);
+}
+ul.points li strong { color: var(--navy); font-weight: 650; }
+ul.points li em { color: var(--blue); font-style: normal; font-weight: 600; }
+
+p.lead {
+  font-family: var(--serif);
+  font-size: clamp(1.0rem, 1.4vw, 1.22rem);
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+/* ---------- Figure handling ---------- */
+.figure {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: center;
+}
+.figure img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  background: #fff;
+  cursor: zoom-in;
+  transition: filter 0.18s ease;
+}
+.figure img:hover { filter: brightness(1.03); }
+.figure figcaption {
+  margin-top: 0.7rem;
+  font-size: 0.8rem;
+  color: var(--grey);
+  line-height: 1.35;
+  text-align: center;
+}
+.figure figcaption b { color: var(--slate); }
+
+/* ---------- Cards / callouts ---------- */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--gold);
+  border-radius: 3px;
+  padding: 1.0rem 1.2rem;
+  margin-top: auto;
+  box-shadow: var(--shadow-sm);
+}
+.card.tight { margin-top: 1rem; }
+.card h3 {
+  font-family: var(--sans);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--gold-deep);
+  margin-bottom: 0.45rem;
+  font-weight: 700;
+}
+.card p { font-size: 1.0rem; color: var(--ink-soft); line-height: 1.46; }
+.card.good { border-left-color: var(--good); }
+.card.good h3 { color: var(--good); }
+.card.warn { border-left-color: var(--warn); }
+.card.warn h3 { color: var(--warn); }
+
+/* ---------- Stat tiles ---------- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.stat {
+  background: var(--navy);
+  color: #fff;
+  border-radius: 4px;
+  padding: 1.1rem 1rem;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  border-top: 2px solid var(--gold-soft);
+}
+.stat .num {
+  font-family: var(--serif);
+  font-size: clamp(1.6rem, 2.8vw, 2.15rem);
+  font-weight: 650;
+  color: var(--gold-soft);
+  line-height: 1;
+}
+.stat .lbl {
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  color: #d3dded;
+  line-height: 1.3;
+}
+
+/* ---------- Tables ---------- */
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: clamp(0.82rem, 1.05vw, 1.0rem);
+  margin-top: 0.4rem;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+table.data th {
+  background: var(--navy);
+  color: #fff;
+  text-align: left;
+  padding: 0.55rem 0.78rem;
+  font-weight: 600;
+  font-size: 0.94em;
+  letter-spacing: 0.01em;
+}
+table.data td {
+  padding: 0.5rem 0.78rem;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink-soft);
+}
+table.data tr:last-child td { border-bottom: none; }
+table.data tr:nth-child(even) td { background: #f5f7fa; }
+table.data tr.best td { background: #eef3ef; font-weight: 650; color: var(--navy); }
+table.data tr.best td:first-child { border-left: 3px solid var(--good); }
+table.data td.mono { font-variant-numeric: tabular-nums; text-align: right; }
+table.data th.r { text-align: right; }
+
+/* ---------- Literature tables (paper-by-paper) ---------- */
+table.lit { table-layout: fixed; }
+table.lit th, table.lit td {
+  font-size: clamp(0.74rem, 0.95vw, 0.9rem);
+  vertical-align: top;
+  line-height: 1.34;
+  padding: 0.5rem 0.72rem;
+}
+table.lit td:first-child { color: var(--navy); font-weight: 650; }
+table.lit td:first-child .yr { display:block; color: var(--grey); font-weight: 500; font-size: 0.92em; }
+table.lit .data-col { color: var(--blue); font-weight: 600; }
+
+/* ---------- Formula cells (hand-crafted features slide) ---------- */
+table.data td.formula {
+  font-family: var(--serif);
+  color: var(--navy);
+  font-size: 1.0em;
+  white-space: nowrap;
+}
+
+/* gap -> contribution strip under the literature table */
+.gap-contrib { display: flex; gap: 1rem; margin-top: 0.9rem; }
+.gap-contrib .card { flex: 1; margin-top: 0; }
+
+/* ---------- Literature-review groups ---------- */
+.lit-group {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--blue-light);
+  border-radius: 3px;
+  padding: 0.75rem 1rem 0.45rem;
+  margin-bottom: 0.9rem;
+}
+.lit-group:last-child { margin-bottom: 0; }
+.lit-group h3 {
+  font-family: var(--serif);
+  color: var(--navy);
+  font-size: 1.02rem;
+  margin-bottom: 0.2rem;
+  display: flex; align-items: center; gap: 0.55rem;
+}
+.lit-group h3 .tag {
+  font-size: 0.74rem; background: var(--blue); color: #fff;
+  width: 1.5rem; height: 1.5rem; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 700; flex: 0 0 auto;
+}
+.lit-group ul.points li {
+  padding-top: 0.24rem; padding-bottom: 0.24rem;
+  font-size: clamp(0.86rem, 1.08vw, 1.0rem);
+  line-height: 1.42;
+}
+
+/* ---------- Two-up mini panels ---------- */
+.panels { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--gold);
+  border-radius: 3px;
+  padding: 1rem 1.15rem;
+}
+.panel h3 {
+  font-family: var(--serif);
+  color: var(--navy);
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.panel h3 .tag {
+  font-family: var(--sans);
+  font-size: 0.68rem; background: var(--navy); color: #fff;
+  padding: 0.14rem 0.5rem; border-radius: 2px; letter-spacing: 0.08em;
+  font-weight: 700;
+}
+.panel ul.points li { font-size: 0.95rem; padding-top: 0.3rem; padding-bottom: 0.3rem; }
+
+/* ---------- Equation blocks (NNLS slide) ---------- */
+.eq-block {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--gold);
+  border-radius: 3px;
+  padding: 0.9rem 1.2rem 1.1rem;
+  margin: 0.4rem 0 0.9rem;
+  box-shadow: var(--shadow-sm);
+}
+.eq-label {
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gold-deep);
+  font-weight: 700;
+  margin: 0.6rem 0 0.4rem;
+}
+.eq-label:first-child { margin-top: 0; }
+.eq {
+  font-family: var(--serif);
+  font-size: clamp(1.05rem, 1.7vw, 1.4rem);
+  color: var(--navy);
+  text-align: center;
+  letter-spacing: 0.01em;
+  padding: 0.3rem 0;
+}
+.eq .small { font-family: var(--sans); font-size: 0.62em; color: var(--slate); text-transform: uppercase; letter-spacing: 0.08em; }
+.eq sub, .eq sup { font-size: 0.66em; }
+
+/* ---------- Q/A mapping rows ---------- */
+.qa-row {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 0.9rem;
+  align-items: start;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.qa-row .q { font-family: var(--serif); font-weight: 700; color: var(--gold-deep); font-size: 1.08rem; }
+.qa-row .a { font-size: 0.98rem; color: var(--ink-soft); line-height: 1.45; }
+.qa-row .a b { color: var(--good); }
+
+/* ---------- References ---------- */
+ol.refs { padding-left: 1.4rem; columns: 2; column-gap: 2.5rem; }
+ol.refs li {
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--ink-soft);
+  margin-bottom: 0.55rem;
+  break-inside: avoid;
+}
+ol.refs li b { color: var(--navy); }
+
+/* ---------- Title slide ---------- */
+.title-slide {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background:
+    radial-gradient(1100px 620px at 50% -25%, #20365a 0%, transparent 60%),
+    linear-gradient(165deg, #0d1a2c 0%, #14253d 55%, #1a3050 100%);
+  color: #fff;
+  padding: 4vh 8vw 8vh;
+  box-shadow: inset 0 5px 0 var(--gold);
+}
+.title-slide::after { display: none; }
+.title-slide .crest {
+  width: 96px; height: 96px; border-radius: 50%;
+  background: #fff; padding: 9px; margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+  border: 2px solid var(--gold-soft);
+  object-fit: contain;
+}
+.title-slide .deg {
+  font-family: var(--sans);
+  letter-spacing: 0.28em; text-transform: uppercase;
+  font-size: 0.82rem; color: var(--gold-soft); font-weight: 700; margin-bottom: 1.1rem;
+}
+.title-slide h1 {
+  font-family: var(--serif);
+  color: #fff; font-size: clamp(1.85rem, 4vw, 3.0rem);
+  line-height: 1.16; max-width: 18ch; font-weight: 600;
+}
+.title-slide h1::after {
+  display: block;
+  width: 70px; height: 2px;
+  margin: 1.3rem auto 0;
+  background: var(--gold-soft);
+}
+.title-slide .subtitle {
+  margin-top: 1.3rem; font-size: clamp(1rem, 1.6vw, 1.25rem);
+  color: #cfe0f2; max-width: 60ch; line-height: 1.5;
+}
+.title-meta {
+  margin-top: 2.4rem; display: flex; flex-wrap: wrap; gap: 1.2rem 2.8rem;
+  justify-content: center; font-size: 1.0rem;
+}
+.title-meta .k { font-family: var(--sans); color: var(--gold-soft); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; display: block; margin-bottom: 0.25rem; }
+.title-meta .v { color: #fff; font-weight: 600; }
+
+/* ---------- Section / closing ---------- */
+.closing { text-align: center; align-items: center; justify-content: center; }
+
+/* ---------- Institutional logo strips ---------- */
+/* Large strip on the title and closing slides (dark background) */
+.title-slide .logo-strip {
+  margin-top: 2.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.4rem;
+  flex-wrap: wrap;
+}
+.title-slide .logo-strip img {
+  height: 42px;
+  background: #fff;
+  padding: 8px 14px;
+  border-radius: 4px;
+  box-shadow: var(--shadow-sm);
+  object-fit: contain;
+}
+.title-slide .logo-strip .lg-tall { height: 50px; }
+
+/* Small per-slide logo bar on content slides (injected by script.js) */
+.brandbar {
+  position: absolute;
+  top: 2.7vh; right: 4.2vw;
+  display: flex; align-items: center; gap: 1.1rem;
+  z-index: 4;
+}
+.brandbar img {
+  height: 23px; width: auto;
+  object-fit: contain;
+  opacity: 0.82;
+}
+
+/* ---------- Footer / nav ---------- */
+.slide-footer {
+  position: absolute;
+  left: 4.2vw; right: 4.2vw; bottom: 2.6vh;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 0.76rem; color: var(--grey);
+  border-top: 1px solid var(--line); padding-top: 0.85vh;
+}
+.slide-footer .cite { font-style: italic; max-width: 78%; line-height: 1.3; }
+/* The per-slide footer brand is redundant now that the institutional logo
+   bar appears on every slide, and it collided with the bottom-right nav. */
+.slide-footer .brand { display: none; }
+
+/* progress bar */
+#progress {
+  position: fixed; top: 0; left: 0; height: 3px;
+  background: var(--gold);
+  z-index: 50; transition: width 0.35s ease;
+}
+
+/* nav controls */
+#nav {
+  position: fixed; bottom: 2.2vh; right: 2.2vw;
+  display: flex; align-items: center; gap: 0.55rem; z-index: 60;
+}
+#nav button {
+  border: none; cursor: pointer;
+  width: 42px; height: 42px; border-radius: 50%;
+  background: var(--navy); color: #fff; font-size: 1.15rem;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow-sm); transition: background 0.2s, transform 0.1s;
+}
+#nav button:hover { background: var(--gold-deep); }
+#nav button:active { transform: scale(0.92); }
+#nav button:disabled { background: var(--grey-light); cursor: default; opacity: 0.55; }
+#counter {
+  background: var(--navy); color: #fff;
+  font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em;
+  padding: 0.5rem 0.85rem; border-radius: 22px; min-width: 92px; text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* helper */
+.muted { color: var(--grey); }
+.nowrap { white-space: nowrap; }
+.spacer { flex: 1; }
+
+/* hint */
+#hint {
+  position: fixed; bottom: 2.6vh; left: 2.2vw;
+  font-size: 0.72rem; color: var(--grey); z-index: 60;
+  background: rgba(255,255,255,0.92); padding: 0.3rem 0.7rem; border-radius: 3px;
+  border: 1px solid var(--line);
+  transition: opacity 0.45s ease;
+}
+#hint.faded { opacity: 0; pointer-events: none; }
+
+/* ---------- Lightbox ---------- */
+#lightbox {
+  position: fixed; inset: 0; z-index: 200;
+  display: none;
+  align-items: center; justify-content: center;
+  flex-direction: column;
+  background: rgba(9, 18, 31, 0.93);
+  padding: 4vh 4vw;
+  cursor: zoom-out;
+  animation: lbfade 0.2s ease;
+}
+#lightbox.open { display: flex; }
+@keyframes lbfade { from { opacity: 0; } to { opacity: 1; } }
+#lightbox-img {
+  max-width: 92vw; max-height: 82vh;
+  object-fit: contain;
+  border-radius: 3px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+  cursor: default;
+}
+#lightbox-caption {
+  margin-top: 1.1rem;
+  max-width: 80vw;
+  color: #dceaf6;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  text-align: center;
+}
+#lightbox-caption b { color: #fff; }
+#lightbox-close {
+  position: fixed; top: 2.2vh; right: 2.4vw;
+  width: 46px; height: 46px; border-radius: 50%;
+  border: none; cursor: pointer;
+  background: rgba(255,255,255,0.14); color: #fff;
+  font-size: 1.7rem; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.18s ease;
+}
+#lightbox-close:hover { background: rgba(255,255,255,0.30); }
+
+@media (max-width: 820px) {
+  .slide-body { flex-direction: column; gap: 1.4vh; }
+  ol.refs { columns: 1; }
+  .panels { grid-template-columns: 1fr; }
+  .brandbar { gap: 0.7rem; }
+  .brandbar img { height: 18px; }
+  .slide h1, .slide-kicker { max-width: calc(100% - 150px); }
+}
