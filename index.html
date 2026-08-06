@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RGB-only Forest Biomass &amp; Carbon Stock Estimation with DINO · MS-AI Defence</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="progress"></div>
+<div id="deck">
+
+  <!-- ============================ 1. TITLE ============================ -->
+  <section class="slide title-slide active">
+    <img class="crest" src="assets/images/nust.jpg" alt="NUST crest">
+    <div class="deg">MS Artificial Intelligence · In-House Thesis Defence</div>
+    <h1>Biomass Calculation &amp; Carbon Stock Estimation Using Satellite Imagery</h1>
+    <div class="title-meta">
+      <div><span class="k">Student</span><span class="v">Assad Abid</span><br><span class="muted">Fall-2023-MS-AI · 450573</span></div>
+      <div><span class="k">Supervisor</span><span class="v">Dr. Faisal Shafait</span></div>
+      <div><span class="k">Co-Supervisor</span><span class="v">Dr. Momina Moetesum</span></div>
+      <div><span class="k">School</span><span class="v">SEECS, NUST</span></div>
+    </div>
+    <div class="title-meta" style="margin-top:1.4rem;">
+      <div><span class="k">Committee Member</span><span class="v">Dr. Junaid Younas</span></div>
+      <div><span class="k">Committee Member</span><span class="v">Dr. M Ali Tahir</span></div>
+    </div>
+    <div class="logo-strip">
+      <img src="logos/seecs-logo.png" alt="NUST SEECS">
+      <img class="lg-tall" src="logos/dll-logo.png" alt="Deep Learning Lab">
+      <img src="logos/Logo-Hochschule-RheinMain.svg.png" alt="Hochschule RheinMain">
+    </div>
+  </section>
+
+  <!-- ============================ 2. MOTIVATION & PROBLEM (old 2 + 6 + 7) ============================ -->
+  <section class="slide">
+    <div class="slide-kicker">Motivation &amp; Problem</div>
+    <h1>Why RGB-Only Biomass Estimation</h1>
+    <div class="slide-body">
+      <div class="col">
+        <ul class="points">
+          <li>Forests store about <strong>861 Pg C</strong> and absorb a further <strong>2.4–3.5 Pg C yr⁻¹</strong>. <strong>Above-ground biomass (AGB, t ha⁻¹)</strong> is the part of that stock inventories actually report, and the variable behind IPCC Tier-2/3 accounting, REDD+ and carbon credits.</li>
+          <li>Landscape-to-global AGB products still disagree by <strong>20–50%</strong> where forests are heterogeneous or data-sparse. The sensors that would settle it are constrained: LiDAR is accurate but expensive, while multispectral and SAR <em>saturate</em> at high biomass.</li>
+          <li>Where the need is greatest, in <strong>Pakistan</strong> and comparable regions, LiDAR is effectively unavailable and field inventories for a district-scale study run to <strong>on the order of 100 plots</strong>.</li>
+        </ul>
+      </div>
+      <div class="col">
+        <div class="card" style="margin-top:0;border-left-width:6px;">
+          <h3>Problem</h3>
+          <p style="font-size:1.14rem;line-height:1.55;">There is <strong>no accurate, data-efficient, operationally affordable</strong> framework for plot-level forest AGB estimation and wall-to-wall carbon mapping that relies <em>only on RGB</em> imagery, requires <em>no site-specific training</em> of a deep feature extractor, and remains robust at the <em>small sample sizes</em> typical of national inventories in developing regions.</p>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="num">RGB-only</div><div class="lbl">No multispectral, SAR, or LiDAR</div></div>
+          <div class="stat"><div class="num">Frozen</div><div class="lbl">No encoder fine-tuning</div></div>
+          <div class="stat"><div class="num">n &asymp; 100</div><div class="lbl">Small-sample robust</div></div>
+        </div>
+        <div class="card good tight">
+          <h3>Driving Question</h3>
+          <p>Can AGB be estimated accurately from the <strong>most widely available imagery</strong>: standard high-resolution RGB, captured with no specialised spectral hardware?</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Pan et al. (2011, 2024); Avitabile et al. (2016); Harris et al. (2021); Araza et al. (2022); IPCC (2019) · Chapter 1</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ 3. RELATED WORK & GAP (old 3 + 4) ============================ -->
+  <section class="slide">
+    <div class="slide-kicker">Related Work</div>
+    <h1>What Has Been Tried, and What Is Missing</h1>
+    <div class="slide-body">
+      <div class="col">
+        <table class="data lit">
+          <tr><th style="width:19%">Study</th><th style="width:20%">Data</th><th style="width:26%">Method</th><th style="width:35%">Key takeaway</th></tr>
+          <tr>
+            <td>Zhu et al. <span class="yr">2023 · review</span></td>
+            <td class="data-col">Multi-sensor remote sensing</td>
+            <td>Survey of GLCM texture, vegetation indices and ML regressors</td>
+            <td>Texture plus spectral predictors improve AGB, but engineered features transfer poorly between sites. These three families are re-implemented here as the <strong>97-D hand-crafted baseline</strong>.</td>
+          </tr>
+          <tr>
+            <td>Liang et al. (2022)<br>Liu et al. (2025)</td>
+            <td class="data-col">UAV / high-resolution RGB</td>
+            <td>GLCM texture fused with spectral features; tree-based and ensemble ML</td>
+            <td>High-resolution RGB texture does predict AGB, and ensembles lift accuracy, but models are tuned per site and species and still depend on hand-crafted inputs.</td>
+          </tr>
+          <tr>
+            <td>Duncanson et al. <span class="yr">2022</span></td>
+            <td class="data-col">GEDI spaceborne LiDAR</td>
+            <td>Allometric AGB density models from canopy structure</td>
+            <td>LiDAR gives the strongest structure signal, but coverage is sparse and acquisition is costly.</td>
+          </tr>
+          <tr>
+            <td>Caron et al. <span class="yr">2021 · DINO</span><br><span class="muted" style="font-size:0.78rem;">Oquab et al. 2024 · DINOv2</span></td>
+            <td class="data-col">ImageNet-1k (DINO); 142M curated images (DINOv2)</td>
+            <td>Self-supervised ViT used as a fixed feature extractor</td>
+            <td>Self-distillation yields transferable, domain-stable features with no fine-tuning. <strong>DINO ViT-Small is the backbone of this work.</strong></td>
+          </tr>
+          <tr>
+            <td>Tolan et al. <span class="yr">2024</span></td>
+            <td class="data-col">Aerial RGB with airborne LiDAR labels</td>
+            <td>Self-supervised ViT plus convolutional decoder</td>
+            <td>Recovers fine canopy height from RGB, but depends on LiDAR supervision and stops at height, not biomass.</td>
+          </tr>
+          <tr>
+            <td>Hao et al. <span class="yr">2025</span></td>
+            <td class="data-col">UAV RGB, single crop</td>
+            <td>Self-supervised plus multi-task learning</td>
+            <td>Regresses AGB directly from SSL features, but only on single-species controlled crops, not forest.</td>
+          </tr>
+        </table>
+        <div class="gap-contrib">
+          <div class="card warn tight">
+            <h3>Research Gap</h3>
+            <p>No study uses <strong>frozen, RGB-only self-supervised descriptors</strong> for plot-level forest AGB across geographically distinct ecosystems, without fine-tuning, LiDAR, or multispectral data.</p>
+          </div>
+          <div class="card good tight">
+            <h3>Our Contribution</h3>
+            <p>Exactly that pipeline: a DINO ViT-Small extractor with correlation-based descriptor selection, optional clustering, and lightweight regressors, validated at two contrasting sites.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Zhu et al. (2023); Liang et al. (2022); Liu et al. (2025); Duncanson et al. (2022); Caron et al. (2021); Oquab et al. (2024); Tolan et al. (2024); Hao et al. (2025)</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ 4. RESEARCH QUESTIONS & OBJECTIVES (old 8 + 9) ============================ -->
+  <section class="slide">
+    <div class="slide-kicker">Research Questions &amp; Objectives</div>
+    <h1>One Central Question, Five Sub-Questions</h1>
+    <div class="slide-body">
+      <div class="col">
+        <p class="lead" style="margin-bottom:0.5rem;"><em>Can a frozen, self-supervised ViT, applied as a fixed extractor to RGB aerial imagery, support accurate plot-level AGB regression across two distinct ecosystems, without site-specific fine-tuning?</em></p>
+        <div class="qa-row"><div class="q">Q1<span class="ctag">C1</span></div><div class="a"><b>Feature transfer.</b> Do the DINO CLS descriptors encode enough canopy structure to recover AGB variance?</div></div>
+        <div class="qa-row"><div class="q">Q2<span class="ctag">C1</span></div><div class="a"><b>Small-sample regression.</b> Which lightweight regressor (NNLS, ridge, or XGBoost) best converts descriptors to AGB when plots are scarce?</div></div>
+        <div class="qa-row"><div class="q">Q3<span class="ctag">C2</span></div><div class="a"><b>Dimensionality control.</b> Does correlation-based descriptor selection beat the full 384-D vector?</div></div>
+        <div class="qa-row"><div class="q">Q4<span class="ctag">C3</span></div><div class="a"><b>Landscape heterogeneity.</b> Does an unsupervised UMAP + K-means partition with cluster-specific regressors improve accuracy?</div></div>
+        <div class="qa-row" style="border-bottom:none;"><div class="q">Q5<span class="ctag">C4</span></div><div class="a"><b>Multi-site consistency.</b> Refitting only the regressor, does the unchanged pipeline give robust gains over the literature baselines at both sites?</div></div>
+        <div class="card">
+          <h3>The Four Contributions Tagged Above</h3>
+          <p><strong>C1 · Build</strong> the RGB-only AGB pipeline on DINO ViT-Small with lightweight regressors. &nbsp;<strong>C2 · Regularise</strong> high-dimensional learned features by interpretable correlation-based selection. &nbsp;<strong>C3 · Adapt</strong> to heterogeneous landscapes with optional unsupervised clustering, assessed by ablation. &nbsp;<strong>C4 · Validate &amp; map</strong> against the literature baselines at two distinct sites, and produce wall-to-wall carbon rasters.</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Research questions and contributions · Chapter 1</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ 5. METHODOLOGY (pipeline) ============================ -->
+  <section class="slide">
+    <div class="slide-kicker">Methodology</div>
+    <h1>A Five-Stage RGB-Only Pipeline</h1>
+    <div class="slide-body">
+      <div class="col narrow">
+        <ul class="points">
+          <li><strong>1 · Patch extraction.</strong> Crop a plot-centred RGB patch, resize to 224×224, and normalise with ImageNet statistics.</li>
+          <li><strong>2 · Descriptor extraction.</strong> Pass the patch through a frozen <strong>DINO ViT-Small</strong> to obtain a 384-D CLS-token descriptor. No fine-tuning, at either site.</li>
+          <li><strong>3 · Descriptor selection.</strong> Rank dimensions by |Pearson r| with AGB on the training set only, then keep the top K.</li>
+          <li><strong>4 · Unsupervised grouping.</strong> Embed with UMAP and cluster with K-means, fitting cluster-specific models where the data support it.</li>
+          <li><strong>5 · Regression.</strong> Apply NNLS, ridge, or XGBoost to predict plot-level AGB and wall-to-wall maps.</li>
+        </ul>
+        <div class="card tight">
+          <h3>Key Principle</h3>
+          <p>The encoder is never trained, so the same backbone serves both sites and only the lightweight regressor is fitted per site.</p>
+        </div>
+      </div>
+      <div class="col wide">
+        <figure class="figure">
+          <img src="assets/images/figure2.jpeg" alt="Five-stage methodological pipeline diagram">
+          <figcaption><b>Fig. 2.</b> The methodological pipeline. An RGB patch is encoded into a 384-D descriptor, descriptors are ranked by correlation with AGB and grouped with UMAP and K-means, and NNLS, ridge, or XGBoost produce plot-level AGB and wall-to-wall biomass maps.</figcaption>
+        </figure>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Materials &amp; Methods §2.2 · Caron et al. (2021) DINO; Dosovitskiy et al. (2021) ViT</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ 6. NNLS ============================ -->
+  <section class="slide">
+    <div class="slide-kicker">Methodology · Primary Regressor</div>
+    <h1>Non-Negative Least Squares (NNLS)</h1>
+    <div class="slide-body">
+      <div class="col">
+        <p class="lead" style="margin-bottom:0.5rem;font-size:1.0rem;">An <strong>instance-based</strong> regressor. For a query patch it selects the <strong>k nearest training plots</strong> in descriptor space, reconstructs the query descriptor as a non-negative simplex combination of those neighbours, then applies the same weights to their measured AGB.</p>
+        <div class="eq-block">
+          <div class="eq-label">Step 1 · Reconstruct the query under a simplex constraint</div>
+          <div class="eq">min<sub>w&nbsp;∈&nbsp;ℝᵏ</sub> ‖ A w − b ‖₂² &nbsp;<span class="small">subject to</span>&nbsp; w ≥ 0,&nbsp; 1ᵀw = 1</div>
+          <div class="eq-label">Step 2 · Predict AGB from the neighbour labels</div>
+          <div class="eq">ŷ = Σ<sub>i=1</sub><sup>k</sup> wᵢ yᵢ</div>
+          <p class="muted" style="font-size:0.82rem;margin-top:0.7rem;line-height:1.4;"><b>A</b> ∈ ℝ<sup>d×k</sup> holds the k neighbour descriptors as columns, <b>b</b> ∈ ℝ<sup>d</sup> is the query descriptor, <b>w</b> the weights, <b>y<sub>i</sub></b> the AGB of neighbour i. Solved by the active-set algorithm (Lawson &amp; Hanson 1974; Bro &amp; De Jong 1997); k and the distance metric are chosen by cross-validation inside each training fold.</p>
+        </div>
+        <div class="card tight">
+          <h3>Lowest Error at Both Sites</h3>
+          <p>DINO + NNLS leads at <strong>%RMSE = 24.71</strong> (Balakot, R² = 0.922) and <strong>17.40</strong> (Karlsruhe, R² = 0.837), ahead of ridge and XGBoost at both sites.</p>
+        </div>
+      </div>
+      <div class="col narrow">
+        <div class="card good" style="margin-top:0;">
+          <h3>Why NNLS Here</h3>
+          <ul class="points" style="margin-top:0.2rem;">
+            <li><strong>Small-sample robust.</strong> No global parametric fit, so it avoids the overfitting XGBoost shows at n = 25.</li>
+            <li><strong>Bounded by construction.</strong> Non-negative weights, and under the simplex constraint a convex combination of observed AGB, so a prediction cannot go negative or run away past the training range.</li>
+            <li><strong>Physically grounded.</strong> Non-negative weights match non-negative biomass, with no saturation at high AGB.</li>
+            <li><strong>Interpretable.</strong> The weights are an explicit mixture over named reference plots.</li>
+            <li><strong>Smooth maps.</strong> Convex blending yields spatially coherent wall-to-wall rasters.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Methodology §3.7.1, Eq. (NNLS) · Lawson &amp; Hanson (1974); Bro &amp; De Jong (1997)</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ 7. STUDY AREAS & DATA (old 12 + 13) ============================ -->
+  <section class="slide">
+    <div class="slide-kicker">Methodology · Study Areas &amp; Data</div>
+    <h1>Two Geographically Distinct Sites</h1>
+    <div class="slide-body">
+      <div class="col wide">
+        <figure class="figure">
+          <img src="assets/images/fig1_study_area_overview.png" alt="Study area overview: Balakot Pakistan and Karlsruhe Germany">
+          <figcaption><b>Fig. 1.</b> (a) Balakot, Pakistan and (b) Karlsruhe, Germany. Field plots are overlaid on RGB aerial imagery, with marker colour encoding reference AGB (t ha⁻¹). Cyan annotations mark zero-biomass references.</figcaption>
+        </figure>
+      </div>
+      <div class="col narrow">
+        <table class="data">
+          <tr><th></th><th>Balakot 🇵🇰</th><th>Karlsruhe 🇩🇪</th></tr>
+          <tr><td>Forest type</td><td>Subtropical / temperate montane</td><td>Managed temperate lowland</td></tr>
+          <tr><td>Plots (n)</td><td class="mono">25</td><td class="mono">113</td></tr>
+          <tr><td>Forested / zero</td><td class="mono">16 / 9</td><td class="mono">101 / 12</td></tr>
+          <tr><td>Forested AGB (t ha⁻¹)</td><td class="mono">2.05–25.77</td><td class="mono">100.9–302.0</td></tr>
+          <tr><td>Full AGB range</td><td class="mono">0–25.8</td><td class="mono">0–302</td></tr>
+          <tr><td>GSD (m)</td><td class="mono">0.23</td><td class="mono">0.177</td></tr>
+          <tr><td>Validation</td><td>Nested LOO</td><td>85/15 split</td></tr>
+        </table>
+        <div class="card good tight">
+          <h3>Bimodal Labels, Two Design Choices</h3>
+          <p>Neither site has a single continuous AGB mode: each carries a block of true <strong>zero-biomass</strong> plots (9 and 12) separated by a wide gap from its forested mode. That bimodality is what motivates <strong>zero-biomass anchoring</strong>, and, in Karlsruhe's structurally varied stands where feature distance stops tracking biomass difference, <strong>per-cluster regressors</strong>.</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Materials &amp; Methods §2.1 &amp; §3.2, Table 1, Fig. 1</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ 8. IMPLEMENTATION (old 16 + reproducibility from old 26) ============================ -->
+  <section class="slide">
+    <div class="slide-kicker">Implementation</div>
+    <h1>Implementation &amp; Validation Protocol</h1>
+    <div class="slide-body">
+      <div class="col">
+        <div class="panels">
+          <div class="panel">
+            <h3><span class="tag">Patches</span> Per site</h3>
+            <ul class="points">
+              <li><strong>Pakistan:</strong> a 152×152 px patch (about 35 m) is centre-cropped to 112×112 and resized to 224×224 (bicubic).</li>
+              <li><strong>Germany:</strong> a 224×224 px patch (about 40 m) is centred on each plot, plus 12 non-forest patches at 0 t ha⁻¹.</li>
+              <li>All patches are ImageNet-normalised before extraction.</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3><span class="tag">Protocol</span> Validation</h3>
+            <ul class="points">
+              <li><strong>Pakistan (n=25):</strong> nested LOO. <em>Descriptor ranking, K, clustering and every hyper-parameter are fitted inside the training fold only, never on the held-out data.</em> The same discipline applies to the literature baselines, so the comparison is like-for-like.</li>
+              <li><strong>Germany (n=113):</strong> 85/15 split stratified within clusters (n<sub>train</sub>=96, n<sub>test</sub>=17; clusters 37/59 train, 8/9 test), with 5-fold inner CV on the training rows tuning K and every regressor hyper-parameter.</li>
+              <li>K is swept over an 18-value grid from 10 to 360. Grids: NNLS 84 configs (neighbours k, cosine/Euclidean, simplex on/off, L2), ridge 16 (α 0.01–1000 × scaling), XGBoost 16. Metrics: <strong>%RMSE</strong> (primary), RMSE, MAE, R².</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card good tight">
+          <h3>Reproducibility &amp; Cost</h3>
+          <p>Public <code>vit_small_patch16_224.dino</code> weights (Caron et al. 2021), 384-D CLS token, used as released; the control backbone is ImageNet-supervised ResNet50 (He et al. 2016). All stochastic steps are seeded (UMAP, K-means, K-fold <code>random_state=42</code>). Because only the small regressor trains, a full run finishes in <strong>minutes on a single mid-range GPU</strong>. Datasets are available to qualified researchers on request; an open code release is the immediate next step.</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">§2.3 patches · §2.8 validation · §2.9 metrics · declarations</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ 9. RESULTS · Pakistan ============================ -->
+  <section class="slide">
+    <div class="slide-kicker">Results · Pakistan (n = 25)</div>
+    <h1>Balakot: DINO + NNLS Leads</h1>
+    <div class="slide-body">
+      <div class="col narrow">
+        <table class="data">
+          <tr><th>Method</th><th class="r">%RMSE</th><th class="r">R²</th></tr>
+          <tr class="best"><td>DINO + NNLS (adaptive K)</td><td class="mono">24.71</td><td class="mono">0.922</td></tr>
+          <tr><td>Random forest*</td><td class="mono">31.12</td><td class="mono">0.876</td></tr>
+          <tr><td>DINO + Ridge (K=160)</td><td class="mono">31.73</td><td class="mono">0.871</td></tr>
+          <tr><td>Gradient boosting*</td><td class="mono">31.91</td><td class="mono">0.870</td></tr>
+          <tr><td>ResNet50 + XGBoost</td><td class="mono">41.47</td><td class="mono">0.780</td></tr>
+          <tr><td>DINO + XGBoost (K=40)</td><td class="mono">53.46</td><td class="mono">0.635</td></tr>
+        </table>
+        <p class="muted" style="font-size:0.78rem;margin-top:0.5rem;">*Hand-crafted 97-D baselines, same nested LOO protocol (Table 3). &nbsp;Forested plots only (n = 16): <b>%RMSE 16.05, R² 0.817</b>.</p>
+        <div class="card good tight">
+          <h3>Key Result</h3>
+          <p><strong>20.6% lower</strong> relative error than the best baseline, at R² = 0.922. Forcing all 384 descriptors, with the estimator held fixed so only selection is ablated, degrades NNLS to <strong>%RMSE = 33.56</strong>, so selection alone is worth 8.85 pp here.</p>
+        </div>
+      </div>
+      <div class="col wide">
+        <figure class="figure">
+          <img src="assets/images/nested_loo_best_scatter_plots.png" alt="Predicted vs observed AGB for Pakistan: NNLS, ridge, XGBoost">
+          <figcaption><b>Fig. 4.</b> Predicted versus observed AGB under nested LOO (n = 25). NNLS and ridge cluster tightly on the 1:1 line with no high-biomass saturation, while XGBoost disperses as tree models overfit at n = 25.</figcaption>
+        </figure>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Results §3.1.1–3.1.4, Tables 2–3, Figs. 4 &amp; 6</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ 10. RESULTS · Germany ============================ -->
+  <section class="slide">
+    <div class="slide-kicker">Results · Germany (n = 113)</div>
+    <h1>Karlsruhe: Robust Generalisation</h1>
+    <div class="slide-body">
+      <div class="col narrow">
+        <table class="data">
+          <tr><th>Method</th><th class="r">%RMSE</th><th class="r">R²</th></tr>
+          <tr class="best"><td>DINO + NNLS (per-cluster K)</td><td class="mono">17.40</td><td class="mono">0.837</td></tr>
+          <tr><td>Ridge regression*</td><td class="mono">22.79</td><td class="mono">0.721</td></tr>
+          <tr><td>Random forest*</td><td class="mono">23.70</td><td class="mono">0.698</td></tr>
+          <tr><td>DINO + Ridge</td><td class="mono">23.83</td><td class="mono">0.695</td></tr>
+          <tr><td>ResNet50 + Ridge</td><td class="mono">24.13</td><td class="mono">0.687</td></tr>
+          <tr><td>DINO + XGBoost</td><td class="mono">26.27</td><td class="mono">0.629</td></tr>
+          <tr><td>Stacking ensemble*</td><td class="mono">53.14</td><td class="mono">−0.517</td></tr>
+        </table>
+        <p class="muted" style="font-size:0.78rem;margin-top:0.5rem;">*Literature baselines, 17 held-out samples (Table 8). &nbsp;Forested test plots only (n = 15): <b>%RMSE 16.34, R² 0.427</b>.</p>
+        <div class="card good tight">
+          <h3>Key Result</h3>
+          <p><strong>23.6% lower</strong> relative error than the best baseline, at RMSE = 30.89 t ha⁻¹ and R² = 0.837 on the 85/15 split. Over 20 repeated stratified splits: <strong>22.99 ± 3.65</strong>, still ahead of the best baseline (24.43 ± 2.46).</p>
+        </div>
+      </div>
+      <div class="col wide">
+        <figure class="figure">
+          <img src="assets/images/german_best_scatter_plots.png" alt="Predicted vs measured AGB for Germany held-out test set">
+          <figcaption><b>Fig. 8.</b> Predicted versus measured AGB on the held-out test set (n<sub>test</sub> = 17), with points coloured by cluster. The stacking baseline collapses to R² = −0.517, its internal CV subdividing an already small training split.</figcaption>
+        </figure>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Results §3.2.1 &amp; §3.2.5, Tables 4 &amp; 8, Figs. 8 &amp; 10</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ 11. RESULTS · backbone ablation (promoted) ============================ -->
+  <section class="slide">
+    <div class="slide-kicker">Results · Backbone Ablation</div>
+    <h1>Is It the Encoder, or Just Deep Features?</h1>
+    <div class="slide-body">
+      <div class="col narrow">
+        <table class="data">
+          <tr><th>Regressor</th><th class="r">DINO<br><span class="muted">384-D</span></th><th class="r">ResNet50<br><span class="muted">2048-D</span></th></tr>
+          <tr><td colspan="3" class="muted" style="font-weight:700;">Balakot 🇵🇰 (n = 25)</td></tr>
+          <tr class="best"><td>NNLS</td><td class="mono">24.71</td><td class="mono">60.33</td></tr>
+          <tr><td>Ridge</td><td class="mono">31.73</td><td class="mono">59.50</td></tr>
+          <tr><td>XGBoost</td><td class="mono">53.46</td><td class="mono">41.47</td></tr>
+          <tr><td colspan="3" class="muted" style="font-weight:700;">Karlsruhe 🇩🇪 (n = 113)</td></tr>
+          <tr class="best"><td>NNLS</td><td class="mono">17.40</td><td class="mono">31.97</td></tr>
+          <tr><td>Ridge</td><td class="mono">23.83</td><td class="mono">24.13</td></tr>
+          <tr><td>XGBoost</td><td class="mono">26.27</td><td class="mono">29.86</td></tr>
+        </table>
+        <p class="muted" style="font-size:0.78rem;margin-top:0.5rem;">%RMSE. Identical pipeline throughout; only the frozen encoder changes.</p>
+      </div>
+      <div class="col wide">
+        <figure class="figure">
+          <img src="assets/images/fig_backbone_comparison.png" alt="Backbone comparison: DINO versus ResNet50 at both sites">
+          <figcaption><b>Fig. 10.</b> %RMSE by backbone and regressor at (a) Balakot and (b) Karlsruhe. Blue: self-supervised DINO ViT-Small (384-D). Orange: ImageNet-supervised ResNet50 (2048-D). Dashed line: best literature baseline.</figcaption>
+        </figure>
+        <div class="card good tight">
+          <h3>The Ranking Inverts</h3>
+          <p>NNLS is the <strong>best</strong> regressor on DINO descriptors at both sites and the <strong>worst</strong> on ResNet50, despite ResNet50 carrying 5&times; the dimensions. Since NNLS predicts purely from cosine distances between descriptors, the self-supervised encoder must be supplying a <strong>meaningful metric</strong>, not merely more features. No ResNet50 configuration beats the baseline at either site.</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Results §3.1.4, §3.2.5 &amp; §3.3 · Tables 3, 9 · Fig. 10 · He et al. (2016) ResNet</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ 12. RESULTS · clustering & ablations ============================ -->
+  <section class="slide">
+    <div class="slide-kicker">Results · Clustering &amp; Ablations</div>
+    <h1>When Does Structure Actually Help?</h1>
+    <div class="slide-body">
+      <div class="col">
+        <figure class="figure">
+          <img src="assets/images/fig3_umap_embeddings.png" alt="UMAP embeddings of German and Pakistani descriptor spaces">
+          <figcaption><b>Fig. 3.</b> UMAP feature space. Germany splits into two coherent clusters (dense high-biomass versus wide-range). Balakot is <strong>one cluster</strong>: its apparent blobs are a projection artefact, with raw-space silhouette <strong>0.14</strong> against <strong>0.37</strong> for Germany and a UMAP noise floor of ~0.36.</figcaption>
+        </figure>
+        <div class="card good tight">
+          <h3>The Diagnostic Decides Correctly at Both Sites</h3>
+          <p>Karlsruhe has real structure, so it is partitioned: for <strong>NNLS</strong> specialisation is worth <strong>+4.2 pp</strong> and outweighs the 1.2 pp lost to smaller training sets. For <strong>XGBoost</strong> the damage is <strong>almost all data loss</strong> (4.4 of 5.1 pp): it is data-hungry, not harmed by structure. Balakot is a single cluster, so the pipeline keeps one global model; forcing a split there costs NNLS 24.71&rarr;64.62, which is exactly what the silhouette predicts.</p>
+        </div>
+      </div>
+      <div class="col">
+        <figure class="figure">
+          <img src="assets/images/fig_ablation_german.png" alt="Karlsruhe ablation with a size-matched control">
+          <figcaption><b>Karlsruhe ablation.</b> The grey bar is the <b>size-matched control</b>: a global model on random subsets of the per-cluster sizes (37/59 rows, 10 draws), which isolates the cost of losing training data from the benefit of specialising.</figcaption>
+        </figure>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Results §3.2.2&ndash;3.2.4, Tables 5&ndash;7, Fig. 3 · sensitivity curve and Balakot ablation in Appendix A5</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ 13. RESULTS · wall-to-wall maps ============================ -->
+  <section class="slide">
+    <div class="slide-kicker">Results · Wall-to-Wall Mapping</div>
+    <h1>From Plots to Wall-to-Wall Maps</h1>
+    <div class="slide-body">
+      <div class="col">
+        <div class="figrow">
+          <figure class="figure">
+            <img src="assets/images/biomass_rasters_comparison.png" alt="Wall-to-wall biomass maps for Pakistan study area">
+            <figcaption><b>Fig. 7 · Balakot.</b> NNLS gives the smoothest, spatially coherent gradient and stays inside the observed range, while XGBoost is noisier. Spatial regularity matters for area-integrated stock reporting.</figcaption>
+          </figure>
+          <figure class="figure">
+            <img src="assets/images/biomass_rasters_corrected_comparison.png" alt="Wall-to-wall AGB maps for Karlsruhe study area">
+            <figcaption><b>Fig. 11 · Karlsruhe.</b> Zero-biomass anchors drive non-forest areas (roads, fields) toward near-zero AGB, reducing artefacts across the 1,030 ha scene.</figcaption>
+          </figure>
+        </div>
+        <div class="card good tight">
+          <h3>One Predictor Per Site, Applied Window by Window</h3>
+          <p>Each scene is tiled into <strong>non-overlapping</strong> 395 px (Karlsruhe) and 152 px (Balakot) windows, encoded, and passed through <em>that site's own fitted NNLS predictor</em>: Karlsruhe uses its per-cluster CV-selected configuration, Balakot its reconstruction-adaptive one. Because every NNLS prediction is a non-negative mixture of measured plots, convex at Balakot, the maps stay inside the field-data range (0–25.4 and 0–253.8 t ha⁻¹) rather than extrapolating like ridge and XGBoost.</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Results §3.1.5 &amp; §3.2.6 · Figs. 7 &amp; 11</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ 14. RESULTS · carbon stock ============================ -->
+  <section class="slide">
+    <div class="slide-kicker">Results · Carbon Stock</div>
+    <h1>From AGB to Carbon and CO₂-Equivalent</h1>
+    <div class="slide-body">
+      <div class="col wide">
+        <div class="eq-block" style="margin-top:0;">
+          <div class="eq-label">Carbon follows from mapped AGB by the IPCC default fraction</div>
+          <div class="eq">C = AGB × 0.47 &nbsp;&nbsp;&nbsp; CO<sub>2</sub>e = C × 44⁄12</div>
+        </div>
+        <table class="data">
+          <tr><th>Scene</th><th class="r">Mapped area</th><th class="r">Mean AGB<br><span class="muted">t ha⁻¹</span></th><th class="r">Mean C<br><span class="muted">t C ha⁻¹</span></th><th class="r">Total C<br><span class="muted">t C</span></th><th class="r">CO₂e<br><span class="muted">t</span></th></tr>
+          <tr><td>Balakot 🇵🇰</td><td class="mono">76 ha</td><td class="mono">12.87</td><td class="mono">6.05</td><td class="mono">459</td><td class="mono">1,685</td></tr>
+          <tr><td>Karlsruhe 🇩🇪</td><td class="mono">1,030 ha</td><td class="mono">178.71</td><td class="mono">83.99</td><td class="mono">86,549</td><td class="mono">317,346</td></tr>
+        </table>
+        <p class="muted" style="font-size:0.82rem;margin-top:0.6rem;">Integrated over the valid extent of the NNLS rasters shown on the previous slide.</p>
+      </div>
+      <div class="col narrow">
+        <div class="card good" style="margin-top:0;">
+          <h3>Why This Is the Deliverable</h3>
+          <p>This is the output a forest department or a carbon-credit verifier can act on: a hectare-level carbon stock for a whole scene, derived from one ordinary RGB acquisition and a public vision model, with no LiDAR flight and no site-specific network training.</p>
+        </div>
+        <div class="card warn tight">
+          <h3>Read With Care</h3>
+          <p>The conversion is a <strong>fixed scalar</strong>, so it adds no information and <em>all</em> map uncertainty is inherited from the AGB prediction. The 0.47 carbon fraction is itself a species-averaged default (IPCC 2006, Vol. 4, Ch. 4), not a locally calibrated value.</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Results §3.1.5 &amp; §3.2.6 · IPCC (2006) default carbon fraction</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ 15. LIMITATIONS ============================ -->
+  <section class="slide">
+    <div class="slide-kicker">Limitations</div>
+    <h1>What These Numbers Do <em>Not</em> Show</h1>
+    <div class="slide-body">
+      <div class="col">
+        <ul class="points">
+          <li><strong>What the accuracy actually measures.</strong> The zero-biomass plots dominate the label variance, so R² mostly rewards telling forest from non-forest rather than resolving biomass within forest. %RMSE is robust to this, R² is not, and the within-forest signal is strong at Balakot but low at Karlsruhe.</li>
+          <li><strong>Quality of the reference data.</strong> The models can only be as good as the field labels. Balakot's allometric model saturates, so nearly a third of its forested plots share a single value, and at Karlsruhe the image patch covers only the central part of the ground area each label refers to.</li>
+        </ul>
+      </div>
+      <div class="col">
+        <ul class="points">
+          <li><strong>Generalisation is shown, not proven.</strong> Two sites, one acquisition each. The pipeline and the encoder are shared, but the regressor is always refitted, so nothing here demonstrates seasonal stability or that a model fitted at one site works at an unseen one.</li>
+          <li><strong>The sensor sets a ceiling.</strong> RGB sees the canopy surface, not the vertical structure that carries most of the biomass. That limits the method wherever the canopy closes over and stands differ mainly in height, which is where LiDAR keeps its advantage.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="margin:0 0 0.2rem;">
+      <h3>Stated, Not Discovered</h3>
+      <p>Every one of these was measured deliberately rather than found in review. Reporting where the method is weak is what makes the cases where it is strong credible.</p>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Limitations &amp; threats to validity · Discussion §5.6</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ 16. CONCLUSIONS & CONTRIBUTIONS (old 23 + 25) ============================ -->
+  <section class="slide">
+    <div class="slide-kicker">Conclusions</div>
+    <h1>Answers, Contributions &amp; What Comes Next</h1>
+    <div class="slide-body">
+      <div class="col">
+        <p class="lead" style="margin-bottom:0.4rem;font-size:1.02rem;">A frozen, public vision encoder plus a convex instance-based regressor delivers plot-level AGB and carbon maps from ordinary RGB, and the advantage comes from the <em>geometry of the embedding</em>, not from depth or dimensionality.</p>
+        <div class="qa-row"><div class="q">Q1 ✓</div><div class="a"><b>Yes.</b> 171 of 384 dimensions correlate with AGB at p &lt; 0.05, and the descriptors recover variance up to R² = 0.922.</div></div>
+        <div class="qa-row"><div class="q">Q2 ✓</div><div class="a"><b>NNLS</b> wins at both sites (n = 25 and n = 113), while XGBoost overfits at small n.</div></div>
+        <div class="qa-row"><div class="q">Q3 ◐</div><div class="a"><b>At small n.</b> Selection is worth <b>8.85 pp</b> for NNLS at Balakot (24.71 vs 33.56), but only <b>0.5 pp</b> at Karlsruhe (17.40 vs 17.90), where the univariate criterion mis-ranks K for internally regularised models.</div></div>
+        <div class="qa-row"><div class="q">Q4 ✓</div><div class="a"><b>Yes, and the structure test decides correctly at both sites.</b> Karlsruhe has two genuine clusters (silhouette 0.37) and per-cluster NNLS gains <b>3.1 pp</b>, with the size-matched control crediting <b>+4.2 pp</b> to specialisation. Balakot is <b>one cluster</b> (0.14), so the pipeline keeps a single global model; a forced split there costs 24.71&rarr;64.62. The gain is NNLS-specific: ridge and XGBoost do not benefit, and 4.4 of XGBoost's 5.1 pp is <b>data loss</b>, not structure.</div></div>
+        <div class="qa-row" style="border-bottom:none;"><div class="q">Q5 ✓</div><div class="a"><b>Yes.</b> With only the regressor refitted per site, the unchanged pipeline gives <b>20.6%</b> and <b>23.6%</b> lower error than the best baseline, and the ResNet50 swap shows the gain is embedding geometry.</div></div>
+      </div>
+      <div class="col narrow">
+        <div class="card good" style="margin-top:0;">
+          <h3>Contributions Met</h3>
+          <ul class="points" style="margin-top:0.2rem;">
+            <li><strong>C1</strong> RGB-only pipeline built and benchmarked. ✓</li>
+            <li><strong>C2</strong> Selection value quantified <em>and bounded</em>. ✓</li>
+            <li><strong>C3</strong> Clustering proposed, ablated, and decomposed with a size-matched control. ✓</li>
+            <li><strong>C4</strong> Two sites, carbon rasters, and a backbone ablation. ✓</li>
+          </ul>
+        </div>
+        <div class="card tight">
+          <h3>Future Work</h3>
+          <ul class="points" style="margin-top:0.2rem;">
+            <li><strong>Transfer.</strong> Leave-one-site-out regressor transfer on larger, multi-biome inventories, which is the step beyond the multi-site validation shown here.</li>
+            <li><strong>Selection.</strong> A model-aware criterion to replace univariate ranking, which is where the one conditional answer arises.</li>
+            <li><strong>Stability.</strong> Multi-date acquisitions and systematic zero-biomass sampling, to separate seasonal effects from the anchor effect on R².</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Results &amp; Discussion mapped to the Chapter 1 questions and contributions · Conclusion §4</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ 17. THANK YOU ============================ -->
+  <section class="slide title-slide closing">
+    <img class="crest" src="assets/images/nust.jpg" alt="NUST crest">
+    <h1>Thank You</h1>
+    <p class="subtitle">Questions &amp; Discussion</p>
+    <div class="title-meta">
+      <div><span class="k">Candidate</span><span class="v">Assad Abid</span><br><span class="muted">aabid.msai23seecs@seecs.edu.pk</span></div>
+      <div><span class="k">Supervisor</span><span class="v">Dr. Faisal Shafait</span></div>
+      <div><span class="k">Co-Supervisor</span><span class="v">Dr. Momina Moetesum</span></div>
+    </div>
+    <p class="subtitle" style="margin-top:1.6rem;font-size:0.95rem;color:#a9c6e2;">Biomass Calculation &amp; Carbon Stock Estimation Using Satellite Imagery · SEECS, NUST<br>Manuscript co-authored with Kohsar University (field data) and RheinMain University of Applied Sciences.<br><span style="color:#7f9cb8;">Backup material follows: A1 hand-crafted features · A2 design rationale · A3 alternatives · A4 descriptor signal · A5 sensitivity &amp; Balakot ablation · A6 references</span></p>
+    <div class="logo-strip">
+      <img src="logos/seecs-logo.png" alt="NUST SEECS">
+      <img class="lg-tall" src="logos/dll-logo.png" alt="Deep Learning Lab">
+      <img src="logos/Logo-Hochschule-RheinMain.svg.png" alt="Hochschule RheinMain">
+    </div>
+  </section>
+
+  <!-- ======================================================================
+       APPENDIX: backup slides, not part of the 17-slide main narrative
+       ====================================================================== -->
+
+  <!-- ============================ A1. HAND-CRAFTED FEATURE FAMILIES (old 5) ============================ -->
+  <section class="slide appendix">
+    <div class="slide-kicker">Appendix A1 · Hand-Crafted Baselines</div>
+    <h1>Inside the Baselines: GLCM &amp; Vegetation Indices</h1>
+    <div class="slide-body">
+      <div class="col">
+        <p class="lead" style="margin-bottom:0.45rem;font-size:0.98rem;">The RGB-only literature (Zhu 2023 review; Liang 2022; Liu 2025) builds biomass regressors on three fixed feature families, re-implemented here as the 97-dimensional baseline benchmarked at both sites.</p>
+        <p class="muted" style="font-size:0.82rem;margin-bottom:0.3rem;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:0.08em;">1 · GLCM texture (Haralick et al. 1973)</p>
+        <table class="data lit" style="table-layout:auto;">
+          <tr><th style="width:42%">Texture feature</th><th>Formula over co-occurrence p(i,j)</th></tr>
+          <tr><td>Contrast</td><td class="formula">Σ (i−j)² p(i,j)</td></tr>
+          <tr><td>Dissimilarity</td><td class="formula">Σ |i−j| p(i,j)</td></tr>
+          <tr><td>Homogeneity</td><td class="formula">Σ p(i,j) / (1 + (i−j)²)</td></tr>
+          <tr><td>Angular Second Moment</td><td class="formula">Σ p(i,j)²</td></tr>
+          <tr><td>Energy</td><td class="formula">√(ASM)</td></tr>
+          <tr><td>Correlation</td><td class="formula">Σ (i−μᵢ)(j−μⱼ) p(i,j) / (σᵢσⱼ)</td></tr>
+        </table>
+        <p class="muted" style="font-size:0.78rem;margin-top:0.4rem;">Computed on the grey-level image at multiple pixel offsets and orientations.</p>
+      </div>
+      <div class="col">
+        <p class="muted" style="font-size:0.82rem;margin-bottom:0.3rem;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:0.08em;">2 · Visible-band vegetation indices</p>
+        <table class="data lit" style="table-layout:auto;">
+          <tr><th style="width:38%">Index</th><th>Definition (R, G, B channels)</th></tr>
+          <tr><td>ExG &middot; Excess Green</td><td class="formula">2G − R − B</td></tr>
+          <tr><td>GLI &middot; Green Leaf</td><td class="formula">(2G − R − B) / (2G + R + B)</td></tr>
+          <tr><td>VARI</td><td class="formula">(G − R) / (G + R − B)</td></tr>
+          <tr><td>RGBVI</td><td class="formula">(G² − B·R) / (G² + B·R)</td></tr>
+          <tr><td>MGRVI</td><td class="formula">(G² − R²) / (G² + R²)</td></tr>
+        </table>
+        <p class="muted" style="font-size:0.82rem;margin:0.6rem 0 0.3rem;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:0.08em;">3 · Per-channel band statistics</p>
+        <p class="muted" style="font-size:0.84rem;margin-bottom:0.2rem;">Mean, standard deviation, skewness, and kurtosis of each R, G, B channel.</p>
+        <div class="card warn tight">
+          <h3>The 97-Dimensional Baseline</h3>
+          <p>The three families concatenate into a <strong>97-dimensional vector</strong>, regressed with random forest, gradient boosting, XGBoost, ridge, stacking, and stepwise models, all tuned under the same protocol as the proposed pipeline. They are beaten by <strong>20.6%</strong> (Balakot) and <strong>23.6%</strong> (Karlsruhe) relative error.</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Methodology §3.10 · Haralick et al. (1973); Zhu et al. (2023); Liu et al. (2025); Liang et al. (2022)</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ A2. JUSTIFICATION (old 14) ============================ -->
+  <section class="slide appendix">
+    <div class="slide-kicker">Appendix A2 · Design Rationale</div>
+    <h1>Why These Design Choices</h1>
+    <div class="slide-body">
+      <div class="col">
+        <ul class="points">
+          <li><strong>Frozen DINO.</strong> Self-distillation yields embeddings stable across domains and resolutions, so deploying at a new site needs only a small regressor rather than encoder retraining.</li>
+          <li><strong>Correlation filter.</strong> Closed-form and interpretable, it adds only K as a hyperparameter, requires no extra model fitting, and nests cleanly inside CV folds.</li>
+          <li><strong>NNLS.</strong> An instance-based method whose simplex constraint (w ≥ 0, Σw = 1) makes each prediction a convex combination of observed AGB, so predictions never extrapolate beyond the training range.</li>
+          <li><strong>UMAP + K-means.</strong> A label-free step that separates structurally distinct stands so each regressor specialises, falling back to one model when only a single group is supported.</li>
+          <li><strong>Zero-biomass anchors.</strong> Pull non-forest areas (roads, fields) toward zero AGB at no extra data cost, suppressing artefacts in wall-to-wall maps.</li>
+        </ul>
+      </div>
+      <div class="col narrow">
+        <div class="card good" style="margin-top:0;">
+          <h3>Operational Logic</h3>
+          <p>Every choice minimises cost and labelled-data demand while staying robust at the sample sizes real inventories in low-resource settings actually reach.</p>
+        </div>
+        <figure class="figure" style="flex:0;">
+          <img src="assets/images/dino_workflow_920x300.png" alt="DINO frozen feature extraction workflow">
+          <figcaption>DINO used purely as a fixed feature extractor, with pretrained weights left untouched.</figcaption>
+        </figure>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Design rationale · Discussion §3.3.1–3.3.4</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ A3. ALTERNATIVES (old 15) ============================ -->
+  <section class="slide appendix">
+    <div class="slide-kicker">Appendix A3 · Alternatives</div>
+    <h1>Alternatives Considered &amp; Benchmarked</h1>
+    <div class="slide-body">
+      <div class="col">
+        <table class="data">
+          <tr><th>Alternative</th><th>Why not chosen, or how compared</th></tr>
+          <tr><td>Hand-crafted GLCM + VI + RGB stats (97-D)</td><td>Re-implemented as six literature baselines (RF, gradient boosting, XGBoost, ridge, stacking, stepwise) and beaten at both sites.</td></tr>
+          <tr><td>Fine-tuning the ViT encoder</td><td>Needs large labelled data and defeats the low-cost, fixed-extractor goal of one shared encoder serving multiple sites.</td></tr>
+          <tr><td>LiDAR / multispectral / SAR fusion</td><td>Excluded by design, since these are unavailable at the Pakistan site. Left as future work.</td></tr>
+          <tr><td>XGBoost as primary regressor</td><td>Overfits badly at n = 25 (%RMSE = 53.46, R² = 0.635), so it is kept only as a comparison model.</td></tr>
+          <tr><td>Full 384-D descriptors or PCA</td><td>The full vector underperforms a ranked subset in ablation, and early PCA experiments were dropped for the simpler correlation filter.</td></tr>
+        </table>
+      </div>
+      <div class="col narrow">
+        <div class="card" style="margin-top:0;">
+          <h3>Controlled Comparison</h3>
+          <p>Hand-crafted XGBoost (%RMSE = 49.54) versus DINO + XGBoost (53.46) at n = 25 isolates the <strong>feature source</strong>: both tree models overfit, so the gain is not attributable to the regressor alone but to the pairing of descriptors with NNLS.</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Baselines §3.1.4 &amp; §3.2.5; ablations Table 7</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ A4. DESCRIPTOR SIGNAL (old 18) ============================ -->
+  <section class="slide appendix">
+    <div class="slide-kicker">Appendix A4 · Descriptor Signal</div>
+    <h1>The Descriptors Carry Real Biomass Signal</h1>
+    <div class="slide-body">
+      <div class="col wide">
+        <figure class="figure">
+          <img src="assets/images/top_9_features_detailed.png" alt="Top-9 DINO descriptors vs AGB scatter plots">
+          <figcaption><b>Fig. 5.</b> The nine highest-ranked DINO dimensions against plot AGB (Balakot). Close Pearson and Spearman agreement confirms approximately linear feature–AGB relationships, justifying correlation ranking. <em>Click to enlarge.</em></figcaption>
+        </figure>
+      </div>
+      <div class="col narrow">
+        <ul class="points">
+          <li>Descriptor–AGB correlations span <strong>−0.843 to +0.871</strong> (mean r = −0.011, SD = 0.429).</li>
+          <li><strong>171 of 384</strong> dimensions (44.5%) are significant at p &lt; 0.05.</li>
+          <li>The top descriptor (feature 14) reaches <strong>r = 0.871</strong> (p = 1.51×10⁻⁸), and all top-10 have |r| &gt; 0.814.</li>
+          <li>The optimal window K = 90–130 sits well below 384, so low-ranked dimensions add noise on small data.</li>
+        </ul>
+        <div class="card tight">
+          <h3>Why Selection Works</h3>
+          <p>Biomass signal is spread broadly across the descriptor space, but the highest-|r| dimensions concentrate it through a closed-form, interpretable filter.</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Results §3.1.3 · descriptor ranking signal, Fig. 5</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+  <!-- ============================ A5. SENSITIVITY & BALAKOT ABLATION (from old 20) ============================ -->
+  <section class="slide appendix">
+    <div class="slide-kicker">Appendix A5 · Sensitivity &amp; Balakot Ablation</div>
+    <h1>How K Is Chosen, and What Clustering Costs at n = 25</h1>
+    <div class="slide-body">
+      <div class="col">
+        <figure class="figure">
+          <img src="assets/images/german_performance_vs_features.png" alt="Performance vs descriptor count K for Germany">
+          <figcaption><b>Fig. 9.</b> Train-only inner-CV %RMSE against descriptor count K (10–360), per Karlsruhe cluster. K is selected on this curve, never on the test set; the NNLS curve is flat to within ~1 pp over a wide range.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <figure class="figure">
+          <img src="assets/images/fig_ablation_pakistan.png" alt="Balakot ablation: clustering and all-descriptor variants">
+          <figcaption><b>Balakot ablation.</b> Forcing clustering at n = 25 is catastrophic for every regressor: NNLS 24.71 &rarr; 64.62.</figcaption>
+        </figure>
+        <div class="card tight">
+          <h3>Two Bounds on the Same Claim</h3>
+          <p>Clustering pays only where genuine structure <em>and</em> enough plots per cluster coexist. Balakot has neither (~12 plots/cluster, silhouette 0.14), Karlsruhe has both, and the silhouette test tells the two cases apart before any model is fitted.</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Results §3.2.2–3.2.4, Tables 5–7, Fig. 9</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+ <!-- ============================ A6. DATA DISTRIBUTION (restored from old 11) ============================ -->
+  <section class="slide appendix">
+    <div class="slide-kicker">Appendix A6 · Data Distribution</div>
+    <h1>How Biomass Is Distributed, and Why It Matters</h1>
+    <div class="slide-body">
+      <div class="col wide">
+        <figure class="figure">
+          <img src="assets/images/pakistan_agb_distribution.png" alt="Histogram of plot-level biomass for the Pakistani dataset">
+          <figcaption><b>Plot-level biomass distribution, Balakot (n = 25).</b> The distribution is <b>bimodal</b>: a low or zero-biomass mode (9 non-forested plots) and a forested mode. This motivates zero-biomass anchoring and instance-based regression. <em>Click to enlarge.</em></figcaption>
+        </figure>
+      </div>
+      <div class="col narrow">
+        <ul class="points">
+          <li><strong>Balakot 🇵🇰.</strong> 16 forested plots span <strong>2.05–25.77 t ha⁻¹</strong> (mean about 20.22), and 9 plots recorded zero AGB on naturally bare terrain, giving an overall range of 0–25.77.</li>
+          <li><strong>Karlsruhe 🇩🇪.</strong> 101 forest plots span <strong>100.9–302.0 t ha⁻¹</strong> (mean about 175) across six species (Scots pine, European beech, sessile and red oak, wild cherry, hornbeam), plus 12 non-forest patches added at 0 t ha⁻¹.</li>
+          <li><strong>Landscape heterogeneity.</strong> In Germany the descriptor space forms clear clusters with diverse biomass. Feature distance no longer tracks biomass difference, so a single global model struggles.</li>
+        </ul>
+        <div class="card good tight">
+          <h3>Design Implication</h3>
+          <p>The contrasting distributions justify two choices: <strong>zero-biomass anchors</strong> for non-forest, and <strong>unsupervised clustering</strong> with per-cluster regressors for heterogeneous Germany.</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">§2.1 &amp; §3.2 · dataset composition, AGB ranges, and clustering motivation</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+  
+  <!-- ============================ A6. REFERENCES (old 27) ============================ -->
+  <section class="slide appendix">
+    <div class="slide-kicker">Appendix A6 · References</div>
+    <h1>Selected References</h1>
+    <div class="slide-body">
+      <div class="col">
+        <ol class="refs">
+          <li>Pan, Y. et al. (2011). A large and persistent carbon sink in the world's forests. <b>Science</b>.</li>
+          <li>Pan, Y. et al. (2024). The enduring world forest carbon sink. <b>Nature</b>.</li>
+          <li>Avitabile, V. et al. (2016). An integrated pan-tropical biomass map. <b>Global Change Biology</b>.</li>
+          <li>Harris, N. L. et al. (2021). Global maps of 21st-century forest carbon fluxes. <b>Nat. Climate Change</b>.</li>
+          <li>Araza, A. et al. (2022). A framework for assessing AGB map accuracy and uncertainty. <b>Remote Sens. Environ.</b></li>
+          <li>Mitchard, E. T. A. (2018). The tropical forest carbon cycle and climate change. <b>Nature</b>.</li>
+          <li>IPCC (2019). Climate Change and Land, Special Report. · IPCC (2006), Vol. 4, Ch. 4 (carbon fraction).</li>
+          <li>Coops, N. C. et al. (2021). Modelling LiDAR-derived forest attributes, a review. <b>Remote Sens. Environ.</b></li>
+          <li>Duncanson, L. et al. (2022). AGB density models for NASA's GEDI. <b>Remote Sens. Environ.</b></li>
+          <li>Haralick, R. M. et al. (1973). Textural features for image classification. <b>IEEE TSMC</b>.</li>
+          <li>Zhu, Y. et al. (2023). Review of RS-based forest AGB estimation. <b>Forests</b>.</li>
+          <li>Liu, J. et al. (2025). Forest AGB estimation using high-resolution imagery and ML. <b>Forests</b>.</li>
+          <li>Liang, Y. et al. (2022). Improved AGB in rubber plantations from UAV RGB. <b>Ecological Indicators</b>.</li>
+          <li>Dosovitskiy, A. et al. (2021). An image is worth 16×16 words (ViT). <b>ICLR</b>.</li>
+          <li>Caron, M. et al. (2021). Emerging properties in self-supervised ViTs (DINO). <b>ICCV</b>. &middot; <i>backbone used here</i>.</li>
+          <li>Oquab, M. et al. (2024). DINOv2: Learning robust visual features without supervision. <b>TMLR</b>.</li>
+          <li>He, K. et al. (2016). Deep residual learning for image recognition (ResNet). <b>CVPR</b>.</li>
+          <li>Tolan, J. et al. (2024). Very high-resolution canopy height maps from RGB. <b>Remote Sens. Environ.</b></li>
+          <li>Hao, P. et al. (2025). Self-supervised and multi-task framework for rapeseed AGB. <b>Agriculture</b>.</li>
+          <li>McInnes, L. et al. (2018). UMAP. <b>JOSS</b>. · Lloyd (1982). K-means. <b>IEEE TIT</b>. · Rousseeuw (1987). Silhouettes. <b>J. Comput. Appl. Math.</b></li>
+          <li>Lawson &amp; Hanson (1974); Bro &amp; De Jong (1997). Non-Negative Least Squares.</li>
+          <li>Hoerl &amp; Kennard (1970). Ridge regression. · Chen &amp; Guestrin (2016). XGBoost. · Breiman (2001). Random Forests. · Friedman (2001). Gradient boosting. · Wolpert (1992). Stacked generalization.</li>
+        </ol>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Full bibliography · thesis References</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
+</div>
+
+<!-- lightbox overlay -->
+<div id="lightbox" aria-hidden="true">
+  <button id="lightbox-close" aria-label="Close (Esc)" title="Close (Esc)">&times;</button>
+  <img id="lightbox-img" src="" alt="">
+  <div id="lightbox-caption"></div>
+</div>
+
+<!-- progress + navigation -->
+<div id="nav">
+  <button id="prevBtn" aria-label="Previous slide" title="Previous (←)">&#8249;</button>
+  <div id="counter">1 / 17</div>
+  <button id="nextBtn" aria-label="Next slide" title="Next (→)">&#8250;</button>
+</div>
+<div id="hint">← / → navigate · click image to enlarge · F fullscreen · A appendix</div>
+
+<script src="script.js"></script>
+</body>
+</html>
