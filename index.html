@@ -326,6 +326,49 @@
       <span class="brand">NUST · SEECS</span>
     </div>
   </section>
+    <!-- ============================ 10. QUALITATIVE ============================ -->
+  <section class="slide stack">
+    <div class="slide-kicker">Results · Qualitative</div>
+    <h1>Where NNLS Succeeds, and Where It Fails</h1>
+    <div class="slide-body">
+      <p class="note" style="margin-top:0.1rem">Karlsruhe hold-out. <b>Outlined left:</b> test patch. <b>Right:</b> the training plots NNLS retrieves and mixes into the prediction.</p>
+      <div class="row">
+        <div class="col">
+          <div class="aside" style="margin-top:0.7rem">
+            <h3>Five largest errors · all dense forest</h3>
+            <p><strong>Alike in the image, unlike in biomass.</strong> RGB shows the canopy surface, not the height holding the mass beneath it.</p>
+          </div>
+          <figure class="figure" style="margin-top:0.9rem">
+            <img style="width:100%;max-height:none" src="assets/images/nnls_worst_under.png" alt="Worst case, under-prediction: test patch and its three retrieved training neighbours">
+            <figcaption><b>221.7 &rarr; 156.4 t ha⁻¹</b>, error 65.3. Retrieval is sound; the labels are not close.</figcaption>
+          </figure>
+          <figure class="figure" style="margin-top:0.7rem">
+            <img style="width:100%;max-height:none" src="assets/images/nnls_worst_over.png" alt="Worst case, over-prediction: test patch and its four retrieved training neighbours">
+            <figcaption><b>157.9 &rarr; 209.5 t ha⁻¹</b>, error 51.6. The same degeneracy, inverted.</figcaption>
+          </figure>
+        </div>
+        <div class="col">
+          <div class="aside quiet" style="margin-top:0.7rem">
+            <h3>Five smallest errors · four are non-forest</h3>
+            <p><strong>Presence is visible, quantity is not.</strong> R² 0.837 all-plot against 0.427 within forest.</p>
+          </div>
+          <figure class="figure" style="margin-top:0.9rem">
+            <img style="width:100%;max-height:none" src="assets/images/nnls_best_forest.png" alt="Best case on forest: test patch and its four retrieved training neighbours">
+            <figcaption><b>242.5 &rarr; 241.4 t ha⁻¹</b>, error 1.1. Here the neighbours straddle the target.</figcaption>
+          </figure>
+          <figure class="figure" style="margin-top:0.7rem">
+            <img style="width:100%;max-height:none" src="assets/images/nnls_best_zero.png" alt="Best case on a zero-biomass patch: test patch and its three retrieved training neighbours">
+            <figcaption><b>0.0 &rarr; 0.0 t ha⁻¹</b>, error 0.0. No canopy is unambiguous in RGB.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="cite">Results §3.2 · NNLS neighbour retrieval on the Karlsruhe hold-out · cf. §3.7.1 and Limitations</span>
+      <span class="brand">NUST · SEECS</span>
+    </div>
+  </section>
+
 
   <!-- ============================ 10. BACKBONE ABLATION ============================ -->
   <section class="slide ruled">
