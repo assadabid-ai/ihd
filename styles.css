@@ -4,7 +4,7 @@
    Editorial academic theme: warm paper ground, charcoal text, a single
    restrained brick accent, hairline rules instead of cards, serif
    display headings against a sans text face. No gradients, no glass,
-   no shadows, no pills. Offline
+   no shadows, no pills. Offline, no dependencies.
    JS contract preserved: .slide / .active / .appendix / .title-slide,
    .figure img, figcaption, .brandbar, .open, .faded and the nine IDs.
    =================================================================== */
@@ -27,12 +27,25 @@
   --sans:  -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-/* Type scale tied to the *smaller* of the two viewport dimensions. Height
-   alone is not enough: a 4:3 screen is tall but narrow, so a height-driven
-   scale sets type too large for the column width and the text wraps into
-   overflow. On 16:9, the target projector geometry, this yields roughly
-   20px at 900p and 17px at 720p. */
-html { font-size: clamp(14px, min(2.34vh, 1.5vw), 20px); }
+/* Type scale expressed in PowerPoint points.
+   A 16:9 PPT slide is 7.5 in = 540 pt tall, so 1 pt = (100/540)vh. The root
+   is set to 10 pt, which makes 1rem === 10pt-equivalent exactly: a rule that
+   reads 1.8rem renders at 18pt on any screen, and the deck no longer shrinks
+   proportionally on large displays the way the old 20px cap made it.
+   The 1.5vw term is a guard for screens narrower than 5:4, where a purely
+   height-driven scale would set type too wide for the column. On 16:9 and
+   4:3 the height term always wins, so point-equivalence is exact.
+
+   --f is the BODY FLOOR: no body text is smaller than this. Every size below
+   is a multiple of it, so the whole deck rescales by editing one number.
+   Excluded by design: footer citations, the keyboard hint and the nav
+   counter (footnotes and chrome), and sub/superscripts, which sit at 0.8em
+   of their parent as typographic convention requires. */
+html { font-size: min(1.8519vh, 1.5vw); }
+:root { --f: 1.80rem; }          /* body floor = 18pt, the deck's 16:9 target */
+/* On 4:3 and narrower the columns lose width, so the same text costs more
+   lines. Step the floor down rather than let slides overflow. */
+@media (max-aspect-ratio: 3/2) { :root { --f: 1.45rem; } }
 html, body {
   height: 100%;
   font-family: var(--sans);
@@ -66,7 +79,7 @@ html, body {
 }
 /* ---------- Slide header ---------- */
 .slide-kicker {
-  font-size: 0.92rem;
+  font-size: var(--f);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink-3);
@@ -76,7 +89,7 @@ html, body {
 }
 .slide h1 {
   font-family: var(--serif);
-  font-size: clamp(1.75rem, 3.15vw, 2.65rem);
+  font-size: calc(var(--f) * 2.05);
   color: var(--ink);
   line-height: 1.1;
   font-weight: 600;
@@ -116,8 +129,8 @@ ul.points { list-style: none; }
 ul.points li {
   position: relative;
   padding: 0.5rem 0 0.5rem 1.15rem;
-  font-size: clamp(1.05rem, 1.38vw, 1.24rem);
-  line-height: 1.52;
+  font-size: calc(var(--f) * 1.16);
+  line-height: 1.45;
   color: var(--ink-2);
 }
 ul.points li::before {
@@ -130,19 +143,19 @@ ul.points li::before {
 ul.points li strong { color: var(--ink); font-weight: 640; }
 ul.points li em { font-style: normal; font-weight: 600; color: var(--accent); }
 /* Tight variant for sidebars */
-ul.points.compact li { padding-top: 0.34rem; padding-bottom: 0.34rem; font-size: 1.12rem; line-height: 1.46; }
+ul.points.compact li { padding-top: 0.3rem; padding-bottom: 0.3rem; font-size: calc(var(--f) * 1.06); line-height: 1.4; }
 p.lead {
   font-family: var(--serif);
-  font-size: clamp(1.16rem, 1.66vw, 1.44rem);
-  line-height: 1.48;
+  font-size: calc(var(--f) * 1.30);
+  line-height: 1.4;
   color: var(--ink-2);
 }
 p.lead em { color: var(--ink); font-style: italic; }
 /* A single large pull statement, for slides carrying one idea. */
 p.statement {
   font-family: var(--serif);
-  font-size: clamp(1.46rem, 2.5vw, 2.15rem);
-  line-height: 1.32;
+  font-size: calc(var(--f) * 1.72);
+  line-height: 1.26;
   color: var(--ink);
   max-width: 30ch;
 }
@@ -156,7 +169,7 @@ p.statement {
 .aside:first-child { margin-top: 0; }
 .aside h3 {
   font-family: var(--sans);
-  font-size: 0.88rem;
+  font-size: var(--f);
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--accent);
@@ -164,8 +177,8 @@ p.statement {
   margin-bottom: 0.42rem;
 }
 .aside p {
-  font-size: 1.12rem;
-  line-height: 1.48;
+  font-size: calc(var(--f) * 1.06);
+  line-height: 1.4;
   color: var(--ink-2);
 }
 .aside p strong { color: var(--ink); font-weight: 640; }
@@ -184,16 +197,16 @@ p.statement {
 .figures .fig-stat { flex: 1; min-width: 0; }
 .figures .v {
   font-family: var(--serif);
-  font-size: clamp(1.56rem, 2.66vw, 2.2rem);
-  line-height: 1;
+  font-size: calc(var(--f) * 1.62);
+  line-height: 1.06;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
 }
 .figures .l {
-  margin-top: 0.42rem;
-  font-size: 0.96rem;
-  line-height: 1.34;
+  margin-top: 0.36rem;
+  font-size: var(--f);
+  line-height: 1.3;
   color: var(--ink-3);
 }
 .figures .l b { color: var(--ink-2); font-weight: 640; }
@@ -223,9 +236,9 @@ p.statement {
   margin-top: 0.8rem;
   padding-top: 0.5rem;
   border-top: 1px solid var(--rule-soft);
-  font-size: 0.96rem;
+  font-size: var(--f);
   color: var(--ink-3);
-  line-height: 1.42;
+  line-height: 1.32;
   text-align: left;
 }
 .figure figcaption b { color: var(--ink-2); font-weight: 640; }
@@ -237,16 +250,16 @@ p.statement {
 table.data {
   width: 100%;
   border-collapse: collapse;
-  font-size: clamp(1.0rem, 1.24vw, 1.16rem);
+  font-size: calc(var(--f) * 1.06);
   margin-top: 0.2rem;
   font-variant-numeric: tabular-nums;
 }
 table.data th {
   text-align: left;
-  padding: 0.4rem 0.9rem 0.5rem 0;
-  font-size: 0.87rem;
+  padding: 0.4rem 0.55rem 0.5rem 0;
+  font-size: var(--f);
   font-weight: 700;
-  letter-spacing: 0.11em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink-3);
   border-bottom: 1px solid var(--ink);
@@ -254,7 +267,7 @@ table.data th {
 }
 table.data th:last-child, table.data td:last-child { padding-right: 0; }
 table.data td {
-  padding: 0.40rem 0.9rem 0.40rem 0;
+  padding: 0.40rem 0.55rem 0.40rem 0;
   border-bottom: 1px solid var(--rule-soft);
   color: var(--ink-2);
   vertical-align: top;
@@ -264,7 +277,7 @@ table.data td.mono { text-align: right; font-variant-numeric: tabular-nums; }
 table.data th.r { text-align: right; }
 table.data th .muted, table.data th .unit {
   display: block;
-  font-size: 0.92em;
+  font-size: 1em;
   letter-spacing: 0.08em;
   color: var(--ink-4);
   font-weight: 600;
@@ -275,9 +288,9 @@ table.data tr.best td.mono { color: var(--accent); }
 /* Group heading inside a table */
 table.data tr.grp td {
   border-bottom: 1px solid var(--rule);
-  padding-top: 0.85rem;
-  padding-bottom: 0.32rem;
-  font-size: 0.86rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.3rem;
+  font-size: var(--f);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -287,16 +300,16 @@ table.data tr.grp:first-child td { padding-top: 0.2rem; }
 /* Literature table: wrapping prose cells */
 table.lit { table-layout: fixed; }
 table.lit th, table.lit td {
-  font-size: clamp(0.94rem, 1.16vw, 1.1rem);
+  font-size: calc(var(--f) * 1.02);
   vertical-align: top;
-  line-height: 1.4;
+  line-height: 1.34;
 }
 table.lit td:first-child { color: var(--ink); font-weight: 640; }
 table.lit td:first-child .yr {
   display: block;
   color: var(--ink-3);
   font-weight: 400;
-  font-size: 0.92em;
+  font-size: 0.98em;
   margin-top: 0.16rem;
 }
 table.lit .data-col { color: var(--ink-3); }
@@ -308,9 +321,9 @@ table.data td.formula {
 }
 /* ---------- Notes under a table or figure ---------- */
 p.note {
-  font-size: 0.98rem;
+  font-size: var(--f);
   color: var(--ink-3);
-  line-height: 1.45;
+  line-height: 1.36;
   margin-top: 0.7rem;
 }
 p.note b { color: var(--ink-2); font-weight: 640; }
@@ -319,12 +332,11 @@ p.note b { color: var(--ink-2); font-weight: 640; }
    matters: whether an ablation exists. */
 .ev {
   font-family: var(--sans);
-  font-size: 0.78rem;
+  font-size: var(--f);
   font-weight: 700;
   letter-spacing: 0.11em;
   text-transform: uppercase;
-  margin-left: 0.5rem;
-  white-space: nowrap;
+  margin-left: 0.4rem;
   color: var(--ink-4);
 }
 .ev::before { content: "· "; }
@@ -340,7 +352,7 @@ p.note b { color: var(--ink-2); font-weight: 640; }
 }
 .flow .step:last-child { border-right: none; margin-right: 0; padding-right: 0; }
 .flow .step .n {
-  font-size: 0.86rem;
+  font-size: var(--f);
   letter-spacing: 0.13em;
   text-transform: uppercase;
   color: var(--accent);
@@ -349,15 +361,15 @@ p.note b { color: var(--ink-2); font-weight: 640; }
 .flow .step .t {
   font-family: var(--serif);
   color: var(--ink);
-  font-size: 1.22rem;
-  line-height: 1.2;
-  margin-top: 0.35rem;
+  font-size: calc(var(--f) * 1.18);
+  line-height: 1.18;
+  margin-top: 0.3rem;
   font-weight: 600;
 }
 .flow .step .s {
-  font-size: 1.0rem;
+  font-size: var(--f);
   color: var(--ink-3);
-  line-height: 1.4;
+  line-height: 1.32;
   margin-top: 0.36rem;
 }
 /* ---------- Numbered method steps ---------- */
@@ -371,25 +383,25 @@ p.note b { color: var(--ink-2); font-weight: 640; }
 .steps .st:last-child { border-right: none; margin-right: 0; padding-right: 0; }
 .steps .st .k {
   font-family: var(--serif);
-  font-size: 1.5rem;
+  font-size: calc(var(--f) * 1.4);
   color: var(--rule);
-  line-height: 1;
+  line-height: 1.06;
   font-weight: 600;
 }
 .steps .st .h {
-  font-size: 0.94rem;
+  font-size: var(--f);
   letter-spacing: 0.11em;
   text-transform: uppercase;
   color: var(--accent);
   font-weight: 700;
   margin: 0.5rem 0 0.3rem;
 }
-.steps .st p { font-size: 1.05rem; line-height: 1.45; color: var(--ink-2); }
+.steps .st p { font-size: var(--f); line-height: 1.34; color: var(--ink-2); }
 /* ---------- Two-up panels ---------- */
 .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; }
 .panel { min-width: 0; }
 .panel h3 {
-  font-size: 0.90rem;
+  font-size: var(--f);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--accent);
@@ -398,7 +410,7 @@ p.note b { color: var(--ink-2); font-weight: 640; }
   padding-bottom: 0.4rem;
   border-bottom: 1px solid var(--rule);
 }
-.panel ul.points li { font-size: 1.09rem; padding-top: 0.34rem; padding-bottom: 0.34rem; line-height: 1.46; }
+.panel ul.points li { font-size: calc(var(--f) * 1.06); padding-top: 0.3rem; padding-bottom: 0.3rem; line-height: 1.4; }
 /* ---------- Equations ---------- */
 .eq-block {
   margin: 0.6rem 0 1rem;
@@ -407,7 +419,7 @@ p.note b { color: var(--ink-2); font-weight: 640; }
   border-bottom: 1px solid var(--rule);
 }
 .eq-label {
-  font-size: 0.85rem;
+  font-size: var(--f);
   text-transform: uppercase;
   letter-spacing: 0.13em;
   color: var(--ink-3);
@@ -417,44 +429,44 @@ p.note b { color: var(--ink-2); font-weight: 640; }
 .eq-label:first-child { margin-top: 0; }
 .eq {
   font-family: var(--serif);
-  font-size: clamp(1.18rem, 1.9vw, 1.58rem);
+  font-size: calc(var(--f) * 1.45);
   color: var(--ink);
   text-align: center;
   padding: 0.25rem 0;
 }
 .eq .small {
   font-family: var(--sans);
-  font-size: 0.62em;
+  font-size: var(--f);
   color: var(--ink-3);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
-.eq sub, .eq sup { font-size: 0.66em; }
+sub, sup { font-size: 0.8em; }
 /* ---------- Question / answer rows ---------- */
 .qa-row {
   display: grid;
-  grid-template-columns: 92px 1fr;
-  gap: 1.4rem;
+  grid-template-columns: max-content 1fr;
+  gap: 1rem;
   align-items: baseline;
   padding: 0.62rem 0;
   border-bottom: 1px solid var(--rule-soft);
 }
 .qa-row:last-child { border-bottom: none; }
 .qa-row .q {
-  font-size: 0.94rem;
+  font-size: var(--f);
   font-weight: 700;
   letter-spacing: 0.10em;
   text-transform: uppercase;
   color: var(--accent);
   white-space: nowrap;
 }
-.qa-row .a { font-size: 1.14rem; color: var(--ink-2); line-height: 1.5; }
+.qa-row .a { font-size: calc(var(--f) * 1.06); color: var(--ink-2); line-height: 1.4; }
 .qa-row .a b { color: var(--ink); font-weight: 640; }
 /* ---------- References ---------- */
 ol.refs { padding-left: 1.3rem; columns: 2; column-gap: 3.2rem; }
 ol.refs li {
-  font-size: 0.94rem;
-  line-height: 1.44;
+  font-size: var(--f);
+  line-height: 1.34;
   color: var(--ink-2);
   margin-bottom: 0.5rem;
   break-inside: avoid;
@@ -483,9 +495,9 @@ ol.refs li i { color: var(--accent); font-style: italic; }
   object-fit: contain;
 }
 .title-slide .deg {
-  letter-spacing: 0.2em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  font-size: 0.84rem;
+  font-size: var(--f);
   color: var(--accent-2);
   font-weight: 700;
   margin-bottom: 1.5rem;
@@ -493,8 +505,8 @@ ol.refs li i { color: var(--accent); font-style: italic; }
 .title-slide h1 {
   font-family: var(--serif);
   color: #fbf9f4;
-  font-size: clamp(1.9rem, 4.1vw, 3.15rem);
-  line-height: 1.12;
+  font-size: calc(var(--f) * 2.5);
+  line-height: 1.1;
   max-width: 20ch;
   font-weight: 600;
   border-bottom: none;
@@ -504,7 +516,7 @@ ol.refs li i { color: var(--accent); font-style: italic; }
 }
 .title-slide .subtitle {
   margin-top: 1.5rem;
-  font-size: clamp(1.06rem, 1.58vw, 1.26rem);
+  font-size: calc(var(--f) * 1.12);
   color: #b9b3a7;
   max-width: 58ch;
   line-height: 1.5;
@@ -514,12 +526,12 @@ ol.refs li i { color: var(--accent); font-style: italic; }
   padding-top: 1.5rem;
   border-top: 1px solid #3a3d43;
   display: flex; flex-wrap: wrap;
-  gap: 1.5rem 3.4rem;
-  font-size: 1.02rem;
+  gap: 1.2rem 3rem;
+  font-size: calc(var(--f) * 1.02);
 }
 .title-meta .k {
   color: var(--ink-4);
-  font-size: 0.76rem;
+  font-size: var(--f);
   text-transform: uppercase;
   letter-spacing: 0.14em;
   display: block;
@@ -662,7 +674,7 @@ ol.refs li i { color: var(--accent); font-style: italic; }
 /* ---------- Inline code ---------- */
 code {
   font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 0.88em;
+  font-size: 0.95em;
   color: var(--ink);
   background: var(--paper-alt);
   padding: 0.06em 0.32em;
@@ -693,6 +705,11 @@ code {
   .slide-footer { bottom: 2.2vh; }
   #hint { bottom: 2.2vh; }
 }
+/* 4:3 columns are narrow enough that cell gutters start to force tables wider
+   than their column. Tighten the gutters rather than shrink the type. */
+@media (max-aspect-ratio: 3/2) {
+  table.data td, table.data th { padding-right: 0.35rem; }
+}
 /* On 4:3 and taller screens the reclaimed bottom padding above is too
    aggressive: the last line of a bottom-anchored aside can graze the
    footer rule. Give the footer band its full clearance back. */
@@ -702,9 +719,9 @@ code {
 /* Reference and full-table appendices carry the most rows of any slide.
    They are read on screen during questions, not from the back of a room,
    so they take a tighter setting to stay on one page. */
-.slide.appendix ol.refs { columns: 3; column-gap: 2.4rem; }
-.slide.appendix ol.refs li { font-size: 0.88rem; line-height: 1.38; margin-bottom: 0.4rem; }
-.slide.appendix table.data { font-size: clamp(0.90rem, 1.08vw, 1.04rem); }
+.slide.appendix ol.refs { columns: 2; column-gap: 3rem; }
+.slide.appendix ol.refs li { margin-bottom: 0.5rem; }
+
 .slide.appendix table.data td { padding-top: 0.34rem; padding-bottom: 0.34rem; }
 /* ---------- Narrow screens ---------- */
 @media (max-width: 900px) {
